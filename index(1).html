@@ -1,0 +1,68 @@
+<input type="file" onchange="previewFile()">
+<div id="preview-container"></div>
+<div id="label-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script type="text/javascript">
+    // the link to your model provided by Teachable Machine export panel
+    const URL = "https://teachablemachine.withgoogle.com/models/VIqp9XTQ6/";
+
+    let model, labelContainer, maxPredictions;
+
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // load the model and metadata
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+        
+        labelContainer = document.getElementById("label-container");
+        for (let i = 0; i < maxPredictions; i++) { // and class labels
+            labelContainer.appendChild(document.createElement("div"));
+        }
+    }
+
+    async function predict(img) {
+        // predict can take in an image, video or canvas html element
+        const prediction = await model.predict(img);
+        for (let i = 0; i < maxPredictions; i++) {
+            const classPrediction =
+                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+            labelContainer.childNodes[i].innerHTML = classPrediction;
+        }
+    }
+
+    function previewFile() {
+        var previewContainer = document.getElementById("preview-container");
+        var file = document.querySelector('input[type=file]').files[0];
+        var reader = new FileReader();
+
+        reader.addEventListener("load", function () {
+            // convert image file to base64 string
+            var img = new Image();
+            img.src = reader.result;
+            img.onload = async function() {
+                // create a canvas element
+                var canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                // draw the image on the canvas
+                var ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+
+                // run the image through the model and display the predictions
+                await predict(canvas);
+            }
+            
+            previewContainer.innerHTML = `<img src="${reader.result}" alt="preview image" style="max-width:200px;">`
+        }, false);
+
+        if (file) {
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    init();
+</script>
